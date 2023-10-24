@@ -5,14 +5,18 @@
 // }
 
 use chrono::Utc;
-use log::error;
+use log::{error, info, warn};
 
 const DIFFICULTY_PREFIX: &str = "00";
 fn hash_to_binary_representation(hash: &[u8]) -> String {
     let mut res: String = String::default();
     for c in hash {
-        res.push_str(&format!("{:b}"), c);
+        res.push_str(&format!("{:b}", c));
     }
+    res
+}
+fn calculate_hash(id: u64, timestamp: i64, prev_hash: &String, block_data: &String, nonce: u64) -> String{
+    let mut res: String = String::default();
     res
 }
 
@@ -69,11 +73,32 @@ impl App {
 
     fn is_block_valid(&self, block: &Block, prev_block: &Block) -> bool{
         if block.previous_hash != prev_block.hash {
-            warn!("block with id: {} has wrong prev hash", block.id)
+            warn!("block with id: {} has wrong prev hash", block.id);
             return false;
         }
-        else if 
-        true
+        else if !hash_to_binary_representation(
+            &hex::decode(&block.hash).expect("can decode from hex"))
+            .starts_with(DIFFICULTY_PREFIX)
+        {
+            warn!("block with id: {} has invalid difficulty", block.id);
+            return false;
+        }
+        else if block.id != prev_block.id + 1{
+            warn!("block with id: {} is not the next block after the latest: {}", block.id, prev_block.id);
+            return false;
+        }
+        else if block.hash != hex::encode(calculate_hash(
+            block.id,
+            block.timestamp,
+            &block.previous_hash,
+            &block.data,
+            block.nonce
+        )){
+            warn!("block with id: {} has invalid hash", block.id);
+            return false;
+        }
+
+        return true
     }
 }
 
