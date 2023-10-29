@@ -6,6 +6,7 @@
 
 use chrono::Utc;
 use log::{error, info, warn};
+use sha2::{Sha256, Digest};
 
 const DIFFICULTY_PREFIX: &str = "00";
 fn hash_to_binary_representation(hash: &[u8]) -> String {
@@ -15,10 +16,43 @@ fn hash_to_binary_representation(hash: &[u8]) -> String {
     }
     res
 }
-fn calculate_hash(id: u64, timestamp: i64, prev_hash: &String, block_data: &String, nonce: u64) -> String{
-    let mut res: String = String::default();
-    res
+fn calculate_hash(id: u64, timestamp: i64, prev_hash: &str, block_data: &str, nonce: u64) -> Vec<u8>{
+    //let mut res: String = String::default();
+    //res
+    let data = serde_json::json!({
+        "id": id,
+        "previous_hash": prev_hash,
+        "data": block_data,
+        "timestamp": timestamp,
+        "nonce": nonce
+    });
+    let mut hasher = Sha256::new();
+    hasher.update(data.to_string().as_bytes());
+    // convert finalize() generic array of bytes into fixed size vector slice of bytes
+    hasher.finalize().as_slice().to_owned()
+    
 }
+fn mine_block(id: u64, timestamp: i64, prev_hash: &str, data: &str) -> (u64, String){
+    info!("mining block...");
+    let mut nonce = 0;
+
+    loop {
+        // log progress
+        if nonce % 100000 == 0 {
+            info!("nonce: {}", nonce);
+        }
+
+        let hash = calculate_hash(id, timestamp, prev_hash, data, nonce);
+        let binary_hash = hash_to_binary_representation(&hash);
+        if binary_hash.starts_with(DIFFICULTY_PREFIX) {
+            info!("mined! nonce: {}, hash: {}, binary hash: {}", nonce, hex::encode(&hash), binary_hash);
+            return (nonce, hex::encode(hash));
+        }
+
+        nonce += 1;
+    }
+
+} 
 
 #[derive(Debug)]
 pub struct App {
@@ -37,10 +71,19 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new(id: u64, previous_hash: String, data: String) {
-        // let now = 
+    pub fn new(id: u64, previous_hash: String, data: String) -> Self{
+        let now = Utc::now();
+        let (nonce, hash) = mine_block(id, now.timestamp(), &previous_hash, &data);
+        Self {
+            id, 
+            timestamp: now.timestamp(),
+            previous_hash,
+            hash,
+            data,
+            nonce
+        }
     }
-    //println("Hello!");
+
 }
 impl App {
     fn new() -> Self {
