@@ -100,6 +100,45 @@ impl App {
 
         return true
     }
+
+    fn is_chain_valid(&mut self, chain: &Vec<Block>) -> bool {
+        for i in 0 .. chain.len() {
+            if i == 0{
+                continue;
+            }
+            let prev_block = chain.get(i - 1).expect("has to exist");
+            let curr_block = chain.get(i).expect("has to exist");
+            if !self.is_block_valid(curr_block, prev_block){
+                return false;
+            }
+        }
+        true
+    }
+
+    fn choose_chain(&mut self, local: Vec<Block>, remote: Vec<Block>) -> Vec<Block>{
+        // choose longest valid chain
+        // more advanced: cumulative mining difficulty factored in (if we have variable difficulties) + more?
+        let local_valid = self.is_chain_valid(&local);
+        let remote_valid = self.is_chain_valid(&remote);
+
+        if local_valid && remote_valid {
+            if local.len() >= remote.len() {
+                local
+            }
+            else {
+                remote
+            }
+        }
+        else if local_valid && !remote_valid {
+            local
+        }
+        else if remote_valid && !local_valid {
+            remote
+        }
+        else {
+            panic!("local and remote chains are both invalid!")
+        }
+    }
 }
 
 fn main() {
